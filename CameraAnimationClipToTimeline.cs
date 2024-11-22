@@ -5,7 +5,7 @@ using UnityEditor;
 using UnityEngine;
 using UnityEngine.Playables;
 using UnityEngine.Timeline;
-using UnityEditor.Formats.Fbx.Exporter;
+//using UnityEditor.Formats.Fbx.Exporter;
 
 namespace DEGames
 {
@@ -219,29 +219,29 @@ namespace DEGames
             AssetDatabase.SaveAssets();
         }
 
-        static void ExportVirtualCameraTrackToFBX([NotNull] AnimationTrack animationTrack)
-        {
-            string assetName = $"{Selection.activeGameObject.name}_TimelineCamera.anim";
-            string assetPath = Path.Combine("Assets", assetName);
-            AnimationClip animationClip = AssetDatabase.LoadAssetAtPath<AnimationClip>(assetPath);
-            if (animationClip == null) return;
-
-            GameObject gameObject = new GameObject();
-            Animation animation = gameObject.AddComponent<Animation>();
-            animation.AddClip(animationClip, $"{Selection.activeGameObject.name}_TimelineCamera");
-            Debug.Log(animation.GetClipCount());
-            animation.clip = animationClip;
-            Debug.Log(animation.GetClipCount());
-
-            //ModelExporter exporter = new ModelExporter();
-            //ExportModelSettingsSerialize exportOptions = new ExportModelSettingsSerialize();
-            //exportOptions.ModelAnimIncludeOption = ModelAnimIncludeOptions.ExportAnimations;
-
-            assetName = $"{Selection.activeGameObject.name}_TimelineCamera.fbx";
-            assetPath = Path.Combine("Assets", assetName);
-            ModelExporter.ExportObject(assetPath, gameObject);
-            GameObject.DestroyImmediate(gameObject);
-        }
+        // static void ExportVirtualCameraTrackToFBX([NotNull] AnimationTrack animationTrack)
+        // {
+        //     string assetName = $"{Selection.activeGameObject.name}_TimelineCamera.anim";
+        //     string assetPath = Path.Combine("Assets", assetName);
+        //     AnimationClip animationClip = AssetDatabase.LoadAssetAtPath<AnimationClip>(assetPath);
+        //     if (animationClip == null) return;
+        //
+        //     GameObject gameObject = new GameObject();
+        //     Animation animation = gameObject.AddComponent<Animation>();
+        //     animation.AddClip(animationClip, $"{Selection.activeGameObject.name}_TimelineCamera");
+        //     Debug.Log(animation.GetClipCount());
+        //     animation.clip = animationClip;
+        //     Debug.Log(animation.GetClipCount());
+        //
+        //     //ModelExporter exporter = new ModelExporter();
+        //     //ExportModelSettingsSerialize exportOptions = new ExportModelSettingsSerialize();
+        //     //exportOptions.ModelAnimIncludeOption = ModelAnimIncludeOptions.ExportAnimations;
+        //
+        //     assetName = $"{Selection.activeGameObject.name}_TimelineCamera.fbx";
+        //     assetPath = Path.Combine("Assets", assetName);
+        //     ModelExporter.ExportObject(assetPath, gameObject);
+        //     GameObject.DestroyImmediate(gameObject);
+        // }
 
         static void ParseCameraAnimation([NotNull] AnimationClip animationClip)
         {
