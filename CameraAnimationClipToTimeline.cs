@@ -118,7 +118,7 @@ namespace DEGames
         {
             if (!FindNessaryComponents()) return;
             ExportVirtualCameraTrackToAnimationClip(_animationTrack);
-            ExportVirtualCameraTrackToFBX(_animationTrack);
+            //ExportVirtualCameraTrackToFBX(_animationTrack);
         }
 
         [CanBeNull]
