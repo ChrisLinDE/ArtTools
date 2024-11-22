@@ -42,7 +42,11 @@ namespace DEGames
                 GameObject.DestroyImmediate(_recordGameObject);
                 _recordGameObject = null;
             }
-            _recordAnimationClip = null;
+            if (_recordAnimationClip != null)
+            {
+                GameObject.DestroyImmediate(_recordAnimationClip);
+                _recordAnimationClip = null;
+            }
         }
 
         static bool FindNessaryComponents()
@@ -53,6 +57,7 @@ namespace DEGames
             _cinemachineVirtualCamera = FindCinemachineVirtualCamera(Selection.activeGameObject);
             if (_playableDirector == null || _cinemachineVirtualCamera == null)
             {
+                EditorUtility.DisplayDialog("警告！", "找不到 Timeline 或攝影機", "確定");
                 Debug.LogWarning("找不到 Timeline 或攝影機");
                 return false;
             }
@@ -60,6 +65,7 @@ namespace DEGames
             _timelineAsset = _playableDirector.playableAsset as TimelineAsset;
             if (_timelineAsset == null)
             {
+                EditorUtility.DisplayDialog("警告！", "找不到 TimelineAsset", "確定");
                 Debug.LogWarning("找不到 TimelineAsset");
                 return false;
             }
@@ -68,7 +74,8 @@ namespace DEGames
                 FindAnimationTrack(_playableDirector, _timelineAsset, _cinemachineVirtualCamera.gameObject);
             if (_animationTrack == null)
             {
-                Debug.LogWarning("找不到 AnimationTrack");
+                EditorUtility.DisplayDialog("警告！", "找不到攝影機的 AnimationTrack", "確定");
+                Debug.LogWarning("找不到 Camera 的 AnimationTrack");
                 return false;
             }
 
@@ -83,6 +90,7 @@ namespace DEGames
             _animationClip = FindAnimationClipAsset($"{Selection.activeGameObject.name}_TimelineCamera");
             if (_animationClip == null)
             {
+                EditorUtility.DisplayDialog("警告！", "找不到攝影機動畫", "確定");
                 Debug.LogWarning("找不到攝影機動畫");
                 return;
             }
@@ -95,16 +103,17 @@ namespace DEGames
             CreateAnimationClip(_animationClip.frameRate);
             ParseCameraAnimation(_animationClip);
             CopyAnimationClipToAnimationTrack(_animationTrack, _recordAnimationClip);
+            ClearAll();
         }
 
-        [MenuItem("GameObject/DEGames/輸出VirtualCamera所屬動畫軌成 Animation Clip", false, -10)]
+        //[MenuItem("GameObject/DEGames/輸出VirtualCamera所屬動畫軌成 Animation Clip", false, -10)]
         static void ExportVirtualCameraTrackToAnimationClip()
         {
             if (!FindNessaryComponents()) return;
             ExportVirtualCameraTrackToAnimationClip(_animationTrack);
         }
 
-        [MenuItem("GameObject/DEGames/輸出VirtualCamera所屬動畫軌成 FBX", false, -10)]
+        //[MenuItem("GameObject/DEGames/輸出VirtualCamera所屬動畫軌成 FBX", false, -10)]
         static void ExportVirtualCameraTrackToFBX()
         {
             if (!FindNessaryComponents()) return;
@@ -148,14 +157,9 @@ namespace DEGames
                         return clip;
                     }
                 }
-
-                // GameObject gameObject = AssetDatabase.LoadAssetAtPath<GameObject>(assetPath);
-                //
-                // return gameObject.GetComponent<Animation>().clip;
             }
 
             return null;
-
         }
 
         [CanBeNull]
@@ -217,9 +221,6 @@ namespace DEGames
 
         static void ExportVirtualCameraTrackToFBX([NotNull] AnimationTrack animationTrack)
         {
-            //AnimationClip animationClip = Instantiate(animationTrack.infiniteClip);
-
-
             string assetName = $"{Selection.activeGameObject.name}_TimelineCamera.anim";
             string assetPath = Path.Combine("Assets", assetName);
             AnimationClip animationClip = AssetDatabase.LoadAssetAtPath<AnimationClip>(assetPath);
@@ -231,7 +232,6 @@ namespace DEGames
             Debug.Log(animation.GetClipCount());
             animation.clip = animationClip;
             Debug.Log(animation.GetClipCount());
-
 
             //ModelExporter exporter = new ModelExporter();
             //ExportModelSettingsSerialize exportOptions = new ExportModelSettingsSerialize();
@@ -276,7 +276,7 @@ namespace DEGames
             _recordGameObject.transform.position = cameraTransform.position;
             //_recordGameObject.transform.rotation = cameraTransform.rotation;
             _recordGameObject.transform.LookAt(cameraTargetTransform);
-            Debug.Log($"Object : {_recordGameObject.name} : {_recordGameObject.transform.position} : {_recordGameObject.transform.rotation.eulerAngles}");
+            //Debug.Log($"Object : {_recordGameObject.name} : {_recordGameObject.transform.position} : {_recordGameObject.transform.rotation.eulerAngles}");
 
             _posX.AddKey(time, _recordGameObject.transform.position.x);
             _posY.AddKey(time, _recordGameObject.transform.position.y);
@@ -297,6 +297,12 @@ namespace DEGames
 
         static void CreateAnimationClip(float frameRate)
         {
+            if (_recordGameObject != null) {
+                GameObject.DestroyImmediate(_recordGameObject);
+            }
+            if (_recordAnimationClip != null) {
+                GameObject.DestroyImmediate(_recordAnimationClip);
+            }
             _recordGameObject = new GameObject();
             _recordAnimationClip = new AnimationClip();
             _recordAnimationClip.frameRate = frameRate;
@@ -331,14 +337,6 @@ namespace DEGames
             //_recordAnimationClip.SetCurve("", typeof(Transform), "m_LocalScale.x", _scaleX);
             //_recordAnimationClip.SetCurve("", typeof(Transform), "m_LocalScale.y", _scaleY);
             //_recordAnimationClip.SetCurve("", typeof(Transform), "m_LocalScale.z", _scaleZ);
-
-    //         // 保存 AnimationClip
-    // #if UNITY_EDITOR
-    //         string path = "Assets/RecordedAnimation.anim";
-    //         AssetDatabase.CreateAsset(animationClip, path);
-    //         AssetDatabase.SaveAssets();
-    //         Debug.Log($"動畫已保存到: {path}");
-    // #endif
         }
     }
 }
