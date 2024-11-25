@@ -7,7 +7,7 @@ using UnityEngine.Playables;
 using UnityEngine.Timeline;
 //using UnityEditor.Formats.Fbx.Exporter;
 
-namespace DEGames
+namespace DEGames.ArtTools
 {
     public class CameraAnimationClipToTimeline
     {
@@ -26,9 +26,8 @@ namespace DEGames
         static AnimationCurve _rotY = null;
         static AnimationCurve _rotZ = null;
         static AnimationCurve _rotW = null;
-        // static AnimationCurve _scaleX = null;
-        // static AnimationCurve _scaleY = null;
-        // static AnimationCurve _scaleZ = null;
+
+        static string _cameraAnimationClipPath = string.Empty;
 
         static void ClearAll()
         {
@@ -47,6 +46,13 @@ namespace DEGames
                 GameObject.DestroyImmediate(_recordAnimationClip);
                 _recordAnimationClip = null;
             }
+            _posX = null;
+            _posY = null;
+            _posZ = null;
+            _rotX = null;
+            _rotY = null;
+            _rotZ = null;
+            _rotW = null;
         }
 
         static bool FindNessaryComponents()
@@ -104,6 +110,7 @@ namespace DEGames
             ParseCameraAnimation(_animationClip);
             CopyAnimationClipToAnimationTrack(_animationTrack, _recordAnimationClip);
             ClearAll();
+            DeleteCameraAnimationClipFile();
         }
 
         //[MenuItem("GameObject/DEGames/輸出VirtualCamera所屬動畫軌成 Animation Clip", false, -10)]
@@ -140,6 +147,7 @@ namespace DEGames
             if (assetGUIDs.Length != 0)
             {
                 string assetPath = AssetDatabase.GUIDToAssetPath(assetGUIDs[0]);
+                _cameraAnimationClipPath = assetPath;
                 return AssetDatabase.LoadAssetAtPath<AnimationClip>(assetPath);
             }
 
@@ -153,6 +161,7 @@ namespace DEGames
                     if (asset is AnimationClip clip && clip.name == assetName)
                     {
                         Debug.Log($"找到動畫剪輯: {clip.name}");
+                        _cameraAnimationClipPath = assetPath;
                         // 使用該動畫，例如將其添加到 Animator
                         return clip;
                     }
@@ -174,9 +183,7 @@ namespace DEGames
                 {
                     Animator bindingObject = playableDirector.GetGenericBinding(trackAsset) as Animator;
                     if (bindingObject == null) continue;
-                    Debug.Log(animationTrack.inClipMode);
                     if (bindingObject.gameObject != gameObject) continue;
-                    Debug.Log(bindingObject.name);
                     return animationTrack;
                 }
             }
@@ -194,8 +201,6 @@ namespace DEGames
             {
                 if (typeof(UnityEngine.Object).IsAssignableFrom(editorCurveBinding.type))
                 {
-                    Debug.Log(
-                        $"{editorCurveBinding.path} | {editorCurveBinding.propertyName} | {editorCurveBinding.type} |");
                     AnimationCurve curve = AnimationUtility.GetEditorCurve(animationClip, editorCurveBinding);
                     AnimationCurve newCurve = new AnimationCurve(curve.keys);
                     animationTrack.infiniteClip.SetCurve(
@@ -247,23 +252,27 @@ namespace DEGames
         {
             string[]   assetGUIDs          = AssetDatabase.FindAssets(animationClip.name);
             GameObject animationGameObject = null;
-            if (assetGUIDs.Length != 0) {
+            if (assetGUIDs.Length != 0)
+            {
                 string assetPath = AssetDatabase.GUIDToAssetPath(assetGUIDs[0]);
                 animationGameObject = AssetDatabase.LoadAssetAtPath<GameObject>(assetPath);
             }
             float timer = 0f;
-            while (timer < animationClip.length) {
+            while (timer < animationClip.length)
+            {
                 animationClip.SampleAnimation(animationGameObject, timer);
                 CameraTransformAnimation(animationGameObject.transform, timer);
-                PrintAnimationClipInfo(animationGameObject.transform);
-                timer += 1.0f / 60.0f;
+                //PrintAnimationClipInfo(animationGameObject.transform);
+                timer += 1.0f / (float)_timelineAsset.editorSettings.frameRate;
             }
             SaveAnimationClip();
         }
 
-        static void PrintAnimationClipInfo([NotNull] Transform transform) {
+        static void PrintAnimationClipInfo([NotNull] Transform transform)
+        {
             Debug.Log($"Object : {transform.name} : {transform.position} : {transform.rotation.eulerAngles}");
-            foreach (Transform tr in transform.transform) {
+            foreach (Transform tr in transform.transform)
+            {
                 PrintAnimationClipInfo(tr);
             }
         }
@@ -274,9 +283,7 @@ namespace DEGames
             Transform cameraTargetTransform = cameraAnimationRoot.GetChild(1);
 
             _recordGameObject.transform.position = cameraTransform.position;
-            //_recordGameObject.transform.rotation = cameraTransform.rotation;
             _recordGameObject.transform.LookAt(cameraTargetTransform);
-            //Debug.Log($"Object : {_recordGameObject.name} : {_recordGameObject.transform.position} : {_recordGameObject.transform.rotation.eulerAngles}");
 
             _posX.AddKey(time, _recordGameObject.transform.position.x);
             _posY.AddKey(time, _recordGameObject.transform.position.y);
@@ -288,11 +295,6 @@ namespace DEGames
             _rotY.AddKey(time, rotation.y);
             _rotZ.AddKey(time, rotation.z);
             _rotW.AddKey(time, rotation.w);
-
-            // 記錄 Scale
-            // _scaleX.AddKey(time, _recordGameObject.transform.localScale.x);
-            // _scaleY.AddKey(time, _recordGameObject.transform.localScale.y);
-            // _scaleZ.AddKey(time, _recordGameObject.transform.localScale.z);
         }
 
         static void CreateAnimationClip(float frameRate)
@@ -316,10 +318,6 @@ namespace DEGames
             _rotY = new AnimationCurve();
             _rotZ = new AnimationCurve();
             _rotW = new AnimationCurve();
-
-            // _scaleX = new AnimationCurve();
-            // _scaleY = new AnimationCurve();
-            // _scaleZ = new AnimationCurve();
         }
 
         static void SaveAnimationClip()
@@ -333,10 +331,13 @@ namespace DEGames
             _recordAnimationClip.SetCurve("", typeof(Transform), "m_LocalRotation.y", _rotY);
             _recordAnimationClip.SetCurve("", typeof(Transform), "m_LocalRotation.z", _rotZ);
             _recordAnimationClip.SetCurve("", typeof(Transform), "m_LocalRotation.w", _rotW);
+        }
 
-            //_recordAnimationClip.SetCurve("", typeof(Transform), "m_LocalScale.x", _scaleX);
-            //_recordAnimationClip.SetCurve("", typeof(Transform), "m_LocalScale.y", _scaleY);
-            //_recordAnimationClip.SetCurve("", typeof(Transform), "m_LocalScale.z", _scaleZ);
+        static void DeleteCameraAnimationClipFile()
+        {
+            if (string.IsNullOrEmpty(_cameraAnimationClipPath)) return;
+            AssetDatabase.DeleteAsset(_cameraAnimationClipPath);
+            _cameraAnimationClipPath = string.Empty;
         }
     }
 }
