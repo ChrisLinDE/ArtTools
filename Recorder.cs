@@ -1,3 +1,4 @@
+#if UNITY_EDITOR
 using System;
 using System.Reflection;
 using UnityEditor;
@@ -19,7 +20,7 @@ namespace DEGames
         static string _folderName             = "../SampleRecordings";
         static string _fileName               = "";
         static bool   _isRecording            = false;
-        
+
         [MenuItem("DEGames/Recorder/Start Game View Recorder", validate = false)]
         public static void StartRecording()
         {
@@ -31,10 +32,10 @@ namespace DEGames
             _isRecording = false;
 
             MethodInfo prepareRecordingMethod =
-                _recorderControllerType.GetMethod("PrepareRecording", 
+                _recorderControllerType.GetMethod("PrepareRecording",
                                                   BindingFlags.Instance | BindingFlags.Public);
             MethodInfo startRecordingMethod =
-                _recorderControllerType.GetMethod("StartRecording", 
+                _recorderControllerType.GetMethod("StartRecording",
                                                   BindingFlags.Instance | BindingFlags.Public);
             if (startRecordingMethod == null || prepareRecordingMethod == null) return;
             prepareRecordingMethod.Invoke(_recorderController, null);
@@ -54,7 +55,7 @@ namespace DEGames
             if (_recorderController == null) return;
 
             MethodInfo stopRecordingMethod =
-                _recorderControllerType.GetMethod("StopRecording", 
+                _recorderControllerType.GetMethod("StopRecording",
                                                   BindingFlags.Instance | BindingFlags.Public);
             if (stopRecordingMethod != null)
             {
@@ -64,7 +65,7 @@ namespace DEGames
             _recorderController     = null;
             _isRecording            = false;
         }
-        
+
         [MenuItem("DEGames/Recorder/Stop Game View Recorder", validate = true)]
         public static bool ValidateStopRecording()
         {
@@ -76,25 +77,25 @@ namespace DEGames
             get => _outputWidth;
             set => _outputWidth = value;
         }
-        
+
         public static int outputHeight
         {
             get => _outputHeight;
             set => _outputHeight = value;
         }
-        
+
         public static string fileName
         {
             get => _fileName;
             set => _fileName = value;
         }
-        
+
         public static string folderName
         {
             get => _folderName;
             set => _folderName = value;
         }
-        
+
         static void PrepareRecoderController()
         {
             Type recorderWindowType = Type.GetType("UnityEditor.Recorder.RecorderWindow, Unity.Recorder.Editor");
@@ -241,10 +242,11 @@ namespace DEGames
                                                     BindingFlags.Instance | BindingFlags.Public);
             if (addRecorderSettingsMethod != null && settingsProp != null && setRecordModeToManualMethod != null)
             {
-                addRecorderSettingsMethod.Invoke(settingsProp.GetValue(_recorderController), 
+                addRecorderSettingsMethod.Invoke(settingsProp.GetValue(_recorderController),
                                                  new object[] { movieRecorderSettings });
                 setRecordModeToManualMethod.Invoke(settingsProp.GetValue(_recorderController), null);
             }
         }
     }
 }
+#endif

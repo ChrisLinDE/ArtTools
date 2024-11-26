@@ -1,3 +1,4 @@
+#if UNITY_EDITOR
 using System.IO;
 using Cinemachine;
 using JetBrains.Annotations;
@@ -341,3 +342,4 @@ namespace DEGames.ArtTools
         }
     }
 }
+#endif
