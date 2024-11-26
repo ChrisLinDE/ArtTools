@@ -1,5 +1,6 @@
 #if UNITY_EDITOR
 using System;
+using System.IO;
 using System.Reflection;
 using UnityEditor;
 using UnityEngine;
@@ -70,6 +71,42 @@ namespace DEGames
         public static bool ValidateStopRecording()
         {
             return Application.isPlaying && _isRecording;
+        }
+
+        [MenuItem("DEGames/Screen Shot", validate = false)]
+        public static void CaptureScreenshot()
+        {
+            Camera cam = Camera.main;
+            if (cam == null)
+            {
+                Debug.LogError("請指定一個攝影機為 Main 作為截圖目標！");
+                return;
+            }
+
+            // 創建 RenderTexture
+            RenderTexture renderTexture = new RenderTexture(1280, 720, 24);
+            cam.targetTexture = renderTexture;
+
+            // 渲染攝影機畫面到 RenderTexture
+            cam.Render();
+
+            // 從 RenderTexture 讀取數據到 Texture2D
+            RenderTexture.active = renderTexture;
+            Texture2D screenshot = new Texture2D(1280, 720, TextureFormat.RGB24, false);
+            screenshot.ReadPixels(new Rect(0, 0, 1280, 720), 0, 0);
+            screenshot.Apply();
+
+            // 清理
+            cam.targetTexture = null;
+            RenderTexture.active  = null;
+            GameObject.DestroyImmediate(renderTexture);
+
+            // 將 Texture2D 保存為 PNG
+            byte[] bytes    = screenshot.EncodeToPNG();
+            string filePath = Path.Combine(Application.dataPath, "../Screenshot.png");
+            File.WriteAllBytes(filePath, bytes);
+
+            Debug.Log($"截圖保存到: {filePath}");
         }
 
         public static int outputWidth
