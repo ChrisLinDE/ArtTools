@@ -1,5 +1,8 @@
-#if UNITY_EDITOR
+//#if UNITY_EDITOR
 using System.IO;
+using System.Collections;
+using System.Collections.Generic;
+using System.Linq;
 using Cinemachine;
 using JetBrains.Annotations;
 using UnityEditor;
@@ -8,7 +11,7 @@ using UnityEngine.Playables;
 using UnityEngine.Timeline;
 //using UnityEditor.Formats.Fbx.Exporter;
 
-namespace DEGames.ArtTools
+namespace DEGames.ArtTools.Editor
 {
     public class CameraAnimationClipToTimeline
     {
@@ -111,8 +114,223 @@ namespace DEGames.ArtTools
             ParseCameraAnimation(_animationClip);
             CopyAnimationClipToAnimationTrack(_animationTrack, _recordAnimationClip);
             ClearAll();
-            DeleteCameraAnimationClipFile();
+            //DeleteCameraAnimationClipFile();
         }
+
+        [MenuItem("GameObject/DEGames/Fetch 攝影機動畫 Keyframe data", false, -10)]
+        static void FetchCameraAnimationKeyframeData()
+        {
+            if (!FindNessaryComponents()) return;
+
+            _animationClip = FindAnimationClipAsset($"{Selection.activeGameObject.name}_TimelineCamera");
+            if (_animationClip == null)
+            {
+                EditorUtility.DisplayDialog("警告！", "找不到攝影機動畫", "確定");
+                Debug.LogWarning("找不到攝影機動畫");
+                return;
+            }
+
+            if (!_animationTrack.inClipMode)
+            {
+                _animationTrack.CreateInfiniteClip("Camera");
+            }
+
+
+            CreateAnimationClip(_animationClip.frameRate);
+            FetchAnimationKeyframe();
+            CopyAnimationClipToAnimationTrack(_animationTrack, _recordAnimationClip);
+            ClearAll();
+        }
+
+        class PositionKeyFrameData
+        {
+            public float _time;
+            public string _name;
+            public Vector3 _value;
+        }
+
+        static void FetchAnimationKeyframe()
+        {
+            AnimationClipCurveData[]   curves               = AnimationUtility.GetAllCurves(_animationClip, true);
+            List<Vector3>              cameraPosition       = new List<Vector3>();
+            List<Vector3>              cameraTargetPosition = new List<Vector3>();
+            AnimationClipCurveData     cameraPositionCurveData = null;
+            AnimationClipCurveData     cameraTargetPositionCurveData = null;
+            List<PositionKeyFrameData> cameraKeyframeData      = new List<PositionKeyFrameData>();
+            List<PositionKeyFrameData> cameraTargetKeyframeData = new List<PositionKeyFrameData>();
+
+            foreach (AnimationClipCurveData curveData in curves)
+            {
+                if (!curveData.propertyName.ToLower().Contains("position"))
+                {
+                    continue;
+                }
+
+                List<PositionKeyFrameData> tempList = cameraKeyframeData;
+                if (curveData.path.ToLower().Contains("target"))
+                {
+                    tempList = cameraTargetKeyframeData;
+                }
+
+                Keyframe[] keyframes = curveData.curve.keys;
+                foreach (Keyframe keyframe in keyframes)
+                {
+                    PositionKeyFrameData positionKeyFrameData =
+                        tempList.FirstOrDefault(e => e._time.Equals(keyframe.time));
+                    if (positionKeyFrameData == null)
+                    {
+                        positionKeyFrameData       = new PositionKeyFrameData();
+                        positionKeyFrameData._name = curveData.path;
+                        positionKeyFrameData._time = keyframe.time;
+                        if (curveData.propertyName == "m_LocalPosition.x")
+                            positionKeyFrameData._value.x = curveData.curve.Evaluate(keyframe.time);
+                        else if (curveData.propertyName == "m_LocalPosition.y")
+                            positionKeyFrameData._value.y = curveData.curve.Evaluate(keyframe.time);
+                        else if (curveData.propertyName == "m_LocalPosition.z")
+                            positionKeyFrameData._value.z = curveData.curve.Evaluate(keyframe.time);
+                        tempList.Add(positionKeyFrameData);
+                        // int index = cameraKeyframeData.FindLastIndex(e => e._time < keyframe.time);
+                        // if (index < 0 || index == cameraKeyframeData.Count - 1)
+                        // {
+                        //     cameraKeyframeData.Add(positionKeyFrameData);
+                        // }
+                        // else
+                        // {
+                        //     if (curveData.propertyName == "m_LocalPosition.x")
+                        //     {
+                        //         AnimationCurve animationCurveY = new AnimationCurve();
+                        //         animationCurveY.AddKey(cameraKeyframeData[index]._time, cameraKeyframeData[index]._value.y);
+                        //         animationCurveY.AddKey(cameraKeyframeData[index + 1]._time, cameraKeyframeData[index + 1]._value.y);
+                        //     }
+                        //     else if (curveData.propertyName == "m_LocalPosition.y")
+                        //         positionKeyFrameData._value.y = curveData.curve.Evaluate(keyframe.time);
+                        //     else if (curveData.propertyName == "m_LocalPosition.z")
+                        //         positionKeyFrameData._value.z = curveData.curve.Evaluate(keyframe.time);
+                        //     AnimationCurve animationCurve = new AnimationCurve();
+                        //     animationCurve.AddKey(cameraKeyframeData[index]._time, cameraKeyframeData[index]._value.x);
+                        //     animationCurve.AddKey(cameraKeyframeData[index]._time, cameraKeyframeData[index]._value.y);
+                        //     animationCurve.AddKey(cameraKeyframeData[index]._time, cameraKeyframeData[index]._value.z);
+                        //     cameraKeyframeData.Insert(index, positionKeyFrameData);
+                        // }
+                    }
+                    else
+                    {
+                        if (curveData.propertyName == "m_LocalPosition.x")
+                            positionKeyFrameData._value.x = curveData.curve.Evaluate(keyframe.time);
+                        else if (curveData.propertyName == "m_LocalPosition.y")
+                            positionKeyFrameData._value.y = curveData.curve.Evaluate(keyframe.time);
+                        else if (curveData.propertyName == "m_LocalPosition.z")
+                            positionKeyFrameData._value.z = curveData.curve.Evaluate(keyframe.time);
+                    }
+                }
+            }
+
+            foreach (PositionKeyFrameData positionKeyFrameData in cameraKeyframeData)
+            {
+                Debug.Log($"Name : {positionKeyFrameData._name}, Time : {positionKeyFrameData._time}, Value : {positionKeyFrameData._value}");
+            }
+
+            foreach (PositionKeyFrameData positionKeyFrameData in cameraTargetKeyframeData)
+            {
+                Debug.Log($"Name : {positionKeyFrameData._name}, Time : {positionKeyFrameData._time}, Value : {positionKeyFrameData._value}");
+            }
+
+            ParseCameraAnimation(cameraKeyframeData, cameraTargetKeyframeData);
+            SaveAnimationClip();
+            // foreach (AnimationClipCurveData curveData in curves)
+            // {
+            //     if (curveData.path.ToLower().Contains("target"))
+            //     {
+            //         if (curveData.propertyName.ToLower().Contains("position"))
+            //         {
+            //             Debug.Log($"Property: {curveData.propertyName}, Path: {curveData.path}");
+            //             cameraTargetPositionCurveData = curveData;
+            //             Keyframe[] keyframes = curveData.curve.keys;
+            //
+            //             foreach (Keyframe keyframe in keyframes)
+            //             {
+            //                 Debug.Log($"Time: {keyframe.time}, Value: {keyframe.value}");
+            //             }
+            //         }
+            //     }
+            //     else
+            //     {
+            //
+            //     }
+            //     Debug.Log($"Property: {curveData.propertyName}, Path: {curveData.path}");
+            //
+            //     // 獲取曲線上的所有關鍵幀
+            //     Keyframe[] keyframes = curveData.curve.keys;
+            //
+            //     foreach (var keyframe in keyframes)
+            //     {
+            //         Debug.Log($"Time: {keyframe.time}, Value: {keyframe.value}");
+            //     }
+            // }
+        }
+
+        static void ParseCameraAnimation(List<PositionKeyFrameData> cameraPositionData, List<PositionKeyFrameData> cameraTargetPositionData)
+        {
+            GameObject cameraGameObject = new GameObject();
+            GameObject cameraTargetGameObject = new GameObject();
+            foreach (PositionKeyFrameData positionKeyFrameData in cameraPositionData)
+            {
+                cameraGameObject.transform.position = positionKeyFrameData._value;
+                PositionKeyFrameData targetPositionKeyFrameData =
+                    cameraTargetPositionData.FirstOrDefault(e => e._time.Equals(positionKeyFrameData._time));
+                if (targetPositionKeyFrameData == null)
+                {
+                    int index = cameraTargetPositionData.FindLastIndex(e => e._time < positionKeyFrameData._time);
+                    if (index < 0 || index >= cameraTargetPositionData.Count)
+                    {
+                        continue;
+                    }
+
+                    Vector3        tempPosition   = Vector3.zero;
+                    AnimationCurve animationCurveX = new AnimationCurve();
+                    animationCurveX.AddKey(cameraTargetPositionData[index]._time,
+                                          cameraTargetPositionData[index]._value.x);
+                    animationCurveX.AddKey(cameraTargetPositionData[index+1]._time,
+                                          cameraTargetPositionData[index+1]._value.x);
+                    tempPosition.x = animationCurveX.Evaluate(positionKeyFrameData._time);
+
+                    AnimationCurve animationCurveY = new AnimationCurve();
+                    animationCurveY.AddKey(cameraTargetPositionData[index]._time,
+                                           cameraTargetPositionData[index]._value.y);
+                    animationCurveY.AddKey(cameraTargetPositionData[index+1]._time,
+                                           cameraTargetPositionData[index+1]._value.y);
+                    tempPosition.y = animationCurveY.Evaluate(positionKeyFrameData._time);
+
+                    AnimationCurve animationCurveZ = new AnimationCurve();
+                    animationCurveZ.AddKey(cameraTargetPositionData[index]._time,
+                                           cameraTargetPositionData[index]._value.z);
+                    animationCurveZ.AddKey(cameraTargetPositionData[index+1]._time,
+                                           cameraTargetPositionData[index+1]._value.z);
+                    tempPosition.z = animationCurveZ.Evaluate(positionKeyFrameData._time);
+
+                    cameraTargetGameObject.transform.position = tempPosition;
+                }
+                else
+                {
+                    cameraTargetGameObject.transform.position = targetPositionKeyFrameData._value;
+                }
+
+                cameraGameObject.transform.LookAt(cameraTargetGameObject.transform);
+
+                _posX.AddKey(positionKeyFrameData._time, cameraGameObject.transform.position.x);
+                _posY.AddKey(positionKeyFrameData._time, cameraGameObject.transform.position.y);
+                _posZ.AddKey(positionKeyFrameData._time, cameraGameObject.transform.position.z);
+
+                // 記錄 Rotation (Quaternion)
+                Quaternion rotation = cameraGameObject.transform.rotation;
+                _rotX.AddKey(positionKeyFrameData._time, rotation.x);
+                _rotY.AddKey(positionKeyFrameData._time, rotation.y);
+                _rotZ.AddKey(positionKeyFrameData._time, rotation.z);
+                _rotW.AddKey(positionKeyFrameData._time, rotation.w);
+            }
+            GameObject.DestroyImmediate(cameraGameObject);
+            GameObject.DestroyImmediate(cameraTargetGameObject);
+		}
 
         //[MenuItem("GameObject/DEGames/輸出VirtualCamera所屬動畫軌成 Animation Clip", false, -10)]
         static void ExportVirtualCameraTrackToAnimationClip()
@@ -259,13 +477,35 @@ namespace DEGames.ArtTools
                 animationGameObject = AssetDatabase.LoadAssetAtPath<GameObject>(assetPath);
             }
             float timer = 0f;
-            while (timer < animationClip.length)
+            AnimationClipCurveData[] curves = AnimationUtility.GetAllCurves(animationClip, true);
+
+            foreach (AnimationClipCurveData curveData in curves)
             {
-                animationClip.SampleAnimation(animationGameObject, timer);
-                CameraTransformAnimation(animationGameObject.transform, timer);
-                //PrintAnimationClipInfo(animationGameObject.transform);
-                timer += 1.0f / (float)_timelineAsset.editorSettings.frameRate;
+                if (!curveData.propertyName.ToLower().Contains("position"))
+                {
+                    continue;
+                }
+
+                if (curveData.path.ToLower().Contains("target"))
+                {
+                    continue;
+                }
+
+                Keyframe[] keyframes = curveData.curve.keys;
+                foreach (Keyframe keyframe in keyframes)
+                {
+                    animationClip.SampleAnimation(animationGameObject, keyframe.time);
+                    CameraTransformAnimation(animationGameObject.transform, timer);
+                }
             }
+
+            // while (timer < animationClip.length)
+            // {
+            //     animationClip.SampleAnimation(animationGameObject, timer);
+            //     CameraTransformAnimation(animationGameObject.transform, timer);
+            //     //PrintAnimationClipInfo(animationGameObject.transform);
+            //     timer += 1.0f / (float)_timelineAsset.editorSettings.frameRate;
+            // }
             SaveAnimationClip();
         }
 
@@ -342,4 +582,4 @@ namespace DEGames.ArtTools
         }
     }
 }
-#endif
+//#endif
