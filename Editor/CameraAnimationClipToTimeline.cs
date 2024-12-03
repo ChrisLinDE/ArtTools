@@ -494,38 +494,38 @@ namespace DEGames.ArtTools.Editor
             }
             if (animationGameObject == null) return;
 
-            EditorCurveBinding[] editorCurveBindings =
-                AnimationUtility.GetCurveBindings(animationClip);
-
-            foreach (EditorCurveBinding editorCurveBinding in editorCurveBindings)
-            {
-                if (!editorCurveBinding.propertyName.ToLower().Contains("position"))
-                {
-                    continue;
-                }
-
-                if (editorCurveBinding.path.ToLower().Contains("target"))
-                {
-                    continue;
-                }
-
-                AnimationCurve animationCurve = AnimationUtility.GetEditorCurve(animationClip, editorCurveBinding);
-
-                foreach (Keyframe keyframe in animationCurve.keys)
-                {
-                    animationClip.SampleAnimation(animationGameObject, keyframe.time);
-                    CameraTransformAnimation(animationGameObject.transform, keyframe.time);
-                }
-            }
-
-            // float timer = 0f;
-            // while (timer < animationClip.length)
+            // EditorCurveBinding[] editorCurveBindings =
+            //     AnimationUtility.GetCurveBindings(animationClip);
+            //
+            // foreach (EditorCurveBinding editorCurveBinding in editorCurveBindings)
             // {
-            //     animationClip.SampleAnimation(animationGameObject, timer);
-            //     CameraTransformAnimation(animationGameObject.transform, timer);
-            //     //PrintAnimationClipInfo(animationGameObject.transform);
-            //     timer += 1.0f / (float)_timelineAsset.editorSettings.frameRate;
+            //     if (!editorCurveBinding.propertyName.ToLower().Contains("position"))
+            //     {
+            //         continue;
+            //     }
+            //
+            //     if (editorCurveBinding.path.ToLower().Contains("target"))
+            //     {
+            //         continue;
+            //     }
+            //
+            //     AnimationCurve animationCurve = AnimationUtility.GetEditorCurve(animationClip, editorCurveBinding);
+            //
+            //     foreach (Keyframe keyframe in animationCurve.keys)
+            //     {
+            //         animationClip.SampleAnimation(animationGameObject, keyframe.time);
+            //         CameraTransformAnimation(animationGameObject.transform, keyframe.time);
+            //     }
             // }
+
+            float timer = 0f;
+            while (timer < animationClip.length)
+            {
+                animationClip.SampleAnimation(animationGameObject, timer);
+                CameraTransformAnimation(animationGameObject.transform, timer);
+                //PrintAnimationClipInfo(animationGameObject.transform);
+                timer += 1.0f / (float)_timelineAsset.editorSettings.frameRate;
+            }
         }
 
         static void PrintAnimationClipInfo([NotNull] Transform transform)
