@@ -10,7 +10,7 @@ using UnityEditor.Recorder;
 using UnityEditor.Recorder.Input;
 #endif
 
-namespace DEGames
+namespace GameAssets.ArtTools.Editor
 {
     public class Recorder
     {
