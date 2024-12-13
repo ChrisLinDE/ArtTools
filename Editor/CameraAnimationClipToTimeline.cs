@@ -55,6 +55,11 @@ namespace GameAssets.ArtTools.Editor
                 _recordGameObject = null;
             }
 
+            if (_recordTargetObject != null) {
+                Object.DestroyImmediate(_recordTargetObject);
+                _recordTargetObject = null;
+            }
+
             if (_recordAnimationClip != null) {
                 Object.DestroyImmediate(_recordAnimationClip);
                 _recordAnimationClip = null;
@@ -127,6 +132,8 @@ namespace GameAssets.ArtTools.Editor
             }
 
             CopyAnimationClipToAnimationTrack(_animationTrack, _recordAnimationClip);
+
+            ClearAll();
         }
 
         [NotNull] static AnimationCurve CutAnimationCurve([NotNull] AnimationCurve curve, float startTime, float endTime) {
